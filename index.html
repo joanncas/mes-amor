@@ -832,6 +832,17 @@ const musica = {
   volumen: 0.75
 };
 
+/* Retraso (ms) desde que aparece la sorpresa hasta que entra KOKO */
+const RETRASO_CANCION_FINAL = 2000;
+
+/* iOS/Safari ignora el ajuste de volumen por código: lo detectamos para
+   no depender de los fundidos allí. */
+const volumenControlable = (() => {
+  const prueba = document.createElement("audio");
+  prueba.volume = 0.5;
+  return prueba.volume === 0.5;
+})();
+
 const ICONO_ON  = '<path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>';
 const ICONO_OFF = '<path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="2.1" fill="none" stroke-linecap="round"/>';
 
@@ -852,46 +863,72 @@ function fundir(audio, desde, hasta, duracion, alTerminar){
 
 /** Arranca la pista base tras el primer toque del usuario */
 function iniciarMusica(){
+  desbloquearAudio(el.audioFinal);   // debe ocurrir dentro del mismo gesto
   if (!musica.baseOk) return;
   reproducir(el.audioBase, 2200);
 }
 
-function reproducir(audio, fadeIn){
-  audio.volume = 0;
-  const intento = audio.play();
+/* Safari en iPhone/iPad exige que CADA <audio> se haya reproducido al menos
+   una vez dentro de un gesto real del usuario. La segunda canción arranca
+   más tarde desde un temporizador, así que aquí la "despertamos" en silencio
+   y la dejamos precargada: sin esto, koko.mp3 nunca suena en Safari móvil. */
+function desbloquearAudio(audio){
+  if (!audio) return;
+  audio.preload = "auto";
+  try { audio.load(); } catch (e){}
+  audio.muted = true;
+  const restaurar = () => {
+    try { audio.pause(); audio.currentTime = 0; } catch (e){}
+    audio.muted = false;
+  };
+  let intento;
+  try { intento = audio.play(); } catch (e){ audio.muted = false; return; }
   if (intento && typeof intento.then === "function"){
-    intento.then(() => {
-      musica.actual = audio;
-      musica.sonando = true;
-      el.btnMusica.classList.add("visible");
-      el.btnMusica.classList.remove("apagado");
-      el.iconoMusica.innerHTML = ICONO_ON;
-      fundir(audio, 0, musica.volumen, fadeIn);
-    }).catch(() => {
-      /* El navegador bloqueó la reproducción: dejamos el botón por si quiere activarla. */
-      musica.actual = audio;
-      musica.sonando = false;
-      el.btnMusica.classList.add("visible", "apagado");
-      el.iconoMusica.innerHTML = ICONO_OFF;
-    });
+    intento.then(restaurar).catch(() => { audio.muted = false; });
+  } else {
+    restaurar();
   }
 }
 
-/** Cambio de canción para la sorpresa: baja la base y entra KOKO */
-function cambiarAPistaFinal(){
-  const arrancarFinal = () => {
-    if (!musica.finalOk) { musica.actual = null; musica.sonando = false; return; }
-    reproducir(el.audioFinal, 1800);
+function reproducir(audio, fadeIn){
+  if (volumenControlable) audio.volume = 0;
+  audio.muted = false;
+  const intento = audio.play();
+  const ok = () => {
+    musica.actual = audio;
+    musica.sonando = true;
+    el.btnMusica.classList.add("visible");
+    el.btnMusica.classList.remove("apagado");
+    el.iconoMusica.innerHTML = ICONO_ON;
+    if (volumenControlable) fundir(audio, 0, musica.volumen, fadeIn);
+  };
+  /* El navegador bloqueó la reproducción: dejamos el botón por si quiere activarla. */
+  const bloqueado = () => {
+    musica.actual = audio;
+    musica.sonando = false;
+    el.btnMusica.classList.add("visible", "apagado");
+    el.iconoMusica.innerHTML = ICONO_OFF;
   };
 
-  if (musica.baseOk && !el.audioBase.paused){
-    fundir(el.audioBase, el.audioBase.volume, 0, 1200, () => {
-      el.audioBase.pause();
-      arrancarFinal();
-    });
+  if (intento && typeof intento.then === "function") intento.then(ok).catch(bloqueado);
+  else ok();   // Safari antiguo no devuelve promesa
+}
+
+/** Baja y detiene la pista base (al oscurecerse la pantalla) */
+function silenciarPistaBase(){
+  if (!musica.baseOk || el.audioBase.paused) return;
+  if (volumenControlable){
+    fundir(el.audioBase, el.audioBase.volume, 0, 1200, () => el.audioBase.pause());
   } else {
-    arrancarFinal();
+    el.audioBase.pause();   // en iOS no hay fundido posible
   }
+}
+
+/** Entra KOKO, ya con la sorpresa en pantalla */
+function arrancarPistaFinal(){
+  if (!el.audioBase.paused) el.audioBase.pause();
+  if (!musica.finalOk) { musica.actual = null; musica.sonando = false; return; }
+  reproducir(el.audioFinal, 1800);
 }
 
 function alternarMusica(){
@@ -907,7 +944,7 @@ function alternarMusica(){
       musica.sonando = true;
       el.btnMusica.classList.remove("apagado");
       el.iconoMusica.innerHTML = ICONO_ON;
-      if (audio.volume < .1) fundir(audio, 0, musica.volumen, 1200);
+      if (volumenControlable && audio.volume < .1) fundir(audio, 0, musica.volumen, 1200);
     }).catch(() => {});
   }
 }
@@ -1078,10 +1115,11 @@ function iniciarTransicionFinal(){
         paso.texto.replace("…", '<span class="puntos"><i>.</i><i>.</i><i>.</i></span>');
       el.textoTransicion.classList.add("visible");
       if (i === PASOS_TRANSICION.length - 1){
-        /* La pantalla empieza a oscurecerse suavemente y entra KOKO */
+        /* La pantalla empieza a oscurecerse y la pista base se apaga.
+           KOKO entra después, ya con la sorpresa visible (ver abrirFinal). */
         setTimeout(() => {
           el.velo.classList.add("oscuro");
-          cambiarAPistaFinal();
+          silenciarPistaBase();
         }, 1500);
         setTimeout(abrirFinal, 3100);
       }
@@ -1097,6 +1135,8 @@ function abrirFinal(){
   setTimeout(() => {
     el.velo.classList.remove("oscuro");
     revelarMensaje();
+    /* La canción entra un momento después de que se vea la sorpresa */
+    setTimeout(arrancarPistaFinal, RETRASO_CANCION_FINAL);
   }, 120);
 }
 
