@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#04101f">
+<title>Hay algo que tienes que descubrir…</title>
+
+<style>
+/* ============================================================
+   1. TOKENS Y BASE
+   ============================================================ */
+:root{
+  --noche:      #04101f;
+  --noche-2:    #0a2340;
+  --celeste:    #7ed8ff;
+  --celeste-pale:#cff1ff;
+  --celeste-deep:#2a9fd6;
+  --blanco:     #ffffff;
+  --error:      #ff9aae;
+
+  --card-bg:    rgba(255,255,255,.055);
+  --card-brd:   rgba(126,216,255,.22);
+
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --r-lg: 26px;
+  --r-md: 18px;
+  --pad: clamp(18px, 5.5vw, 32px);
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html,body{ height:100%; }
+
+body{
+  font-family: var(--body);
+  background: var(--noche);
+  color: var(--blanco);
+  overflow:hidden;
+  position:fixed;
+  inset:0;
+  width:100%;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+/* Capa de fondo: gradientes suaves + orbes de luz celeste */
+#fondo{
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(120% 80% at 15% 0%,  rgba(126,216,255,.20), transparent 60%),
+    radial-gradient(100% 70% at 90% 20%, rgba(42,159,214,.18), transparent 62%),
+    radial-gradient(140% 90% at 50% 110%, rgba(126,216,255,.12), transparent 60%),
+    linear-gradient(170deg, #061a30 0%, var(--noche) 55%, #030c17 100%);
+  transition: filter 1.2s ease, transform 1.6s ease;
+}
+
+/* Grano sutil para que no parezca un gradiente plano genérico */
+#fondo::after{
+  content:""; position:absolute; inset:-50%;
+  background-image:
+    radial-gradient(rgba(255,255,255,.05) .5px, transparent .5px);
+  background-size: 3px 3px;
+  opacity:.5;
+  pointer-events:none;
+}
+
+/* Corazones flotando (capa decorativa DOM) */
+#corazones-fondo{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.corazon-flotante{
+  position:absolute; bottom:-60px;
+  animation: subirCorazon linear infinite;
+  opacity:0;
+}
+.corazon-flotante svg{ display:block; }
+@keyframes subirCorazon{
+  0%   { transform: translateY(0) translateX(0) rotate(0deg) scale(.85); opacity:0; }
+  12%  { opacity:.55; }
+  80%  { opacity:.35; }
+  100% { transform: translateY(-112vh) translateX(var(--drift,20px)) rotate(22deg) scale(1.05); opacity:0; }
+}
+
+/* ============================================================
+   2. LAYOUT DE PANTALLAS
+   ============================================================ */
+.pantalla{
+  position:fixed; inset:0; z-index:2;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding: calc(env(safe-area-inset-top) + 22px) var(--pad) calc(env(safe-area-inset-bottom) + 22px);
+  overflow-y:auto;
+}
+.pantalla.activa{ display:flex; animation: entrarPantalla .7s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes entrarPantalla{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:none;} }
+
+.contenedor{ width:100%; max-width: 480px; margin:auto; }
+
+/* ============================================================
+   3. PANTALLA DE INICIO
+   ============================================================ */
+.eyebrow{
+  font-size:11px; letter-spacing:.32em; text-transform:uppercase;
+  color: var(--celeste); opacity:.85; margin-bottom:26px; text-align:center;
+  font-weight:600;
+}
+.titulo-inicio{
+  font-family: var(--display);
+  font-size: clamp(31px, 9.2vw, 46px);
+  line-height:1.14;
+  font-weight:400;
+  text-align:center;
+  letter-spacing:-.01em;
+  text-wrap:balance;
+}
+.titulo-inicio em{
+  font-style:italic;
+  color: var(--celeste);
+  text-shadow: 0 0 26px rgba(126,216,255,.45);
+}
+.sub-inicio{
+  margin-top:20px; text-align:center;
+  font-size: clamp(15px, 4.2vw, 17px);
+  line-height:1.6;
+  color: rgba(255,255,255,.62);
+  text-wrap:balance;
+}
+.linea-deco{
+  width:44px; height:1px; margin:32px auto;
+  background:linear-gradient(90deg, transparent, var(--celeste), transparent);
+}
+
+/* Botón principal */
+.btn{
+  display:block; width:100%;
+  padding:19px 24px;
+  border:none; border-radius:100px;
+  background: linear-gradient(135deg, var(--celeste) 0%, #a8e6ff 50%, var(--celeste-deep) 100%);
+  color:#03192b;
+  font-family:var(--body);
+  font-size:15px; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+  cursor:pointer;
+  box-shadow: 0 12px 34px rgba(126,216,255,.28), inset 0 1px 0 rgba(255,255,255,.5);
+  transition: transform .18s ease, box-shadow .25s ease, opacity .25s ease;
+  min-height:58px;
+}
+.btn:active{ transform: scale(.97); }
+.btn:disabled{ opacity:.32; box-shadow:none; cursor:default; }
+.btn:focus-visible{ outline:3px solid var(--celeste-pale); outline-offset:3px; }
+
+.pulso-btn{ animation: pulsoBtn 3.4s ease-in-out infinite; }
+@keyframes pulsoBtn{
+  0%,100%{ box-shadow: 0 12px 34px rgba(126,216,255,.28), inset 0 1px 0 rgba(255,255,255,.5); }
+  50%    { box-shadow: 0 12px 46px rgba(126,216,255,.55), inset 0 1px 0 rgba(255,255,255,.5); }
+}
+
+.nota-inicio{
+  margin-top:20px; text-align:center;
+  font-size:12px; letter-spacing:.06em;
+  color:rgba(255,255,255,.35);
+}
+
+/* ============================================================
+   4. PANTALLA DEL CUESTIONARIO
+   ============================================================ */
+#pantalla-quiz .contenedor{ display:flex; flex-direction:column; gap:20px; }
+
+/* --- Progreso --- */
+.progreso{ width:100%; }
+.progreso-top{
+  display:flex; align-items:baseline; justify-content:space-between;
+  font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  color: rgba(255,255,255,.55); margin-bottom:10px; font-weight:600;
+}
+.progreso-top strong{ color:var(--celeste); font-weight:700; }
+/* Firma visual: barra hecha de bloques ████░░░░░░ */
+.barra-bloques{
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(15px, 4.6vw, 19px);
+  letter-spacing:.06em;
+  line-height:1;
+  color: rgba(126,216,255,.16);
+  white-space:nowrap;
+  display:block;
+}
+.barra-bloques b{
+  color: var(--celeste);
+  font-weight:400;
+  text-shadow: 0 0 12px rgba(126,216,255,.7);
+}
+.barra-fina{
+  margin-top:9px; height:2px; width:100%;
+  background: rgba(255,255,255,.09); border-radius:2px; overflow:hidden;
+}
+.barra-fina span{
+  display:block; height:100%; width:0%;
+  background: linear-gradient(90deg, var(--celeste-deep), var(--celeste));
+  border-radius:2px;
+  transition: width .55s cubic-bezier(.3,.9,.3,1);
+}
+
+/* --- Tarjeta de pregunta --- */
+.tarjeta{
+  background: var(--card-bg);
+  border:1px solid var(--card-brd);
+  border-radius: var(--r-lg);
+  padding: clamp(20px, 5.6vw, 28px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 22px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07);
+  position:relative;
+}
+.tarjeta.entra{ animation: entraTarjeta .5s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes entraTarjeta{ from{ opacity:0; transform: translateX(26px) scale(.98);} to{ opacity:1; transform:none;} }
+.tarjeta.sale{ animation: saleTarjeta .34s ease-in forwards; }
+@keyframes saleTarjeta{ to{ opacity:0; transform: translateX(-26px) scale(.97); } }
+.tarjeta.temblor{ animation: temblor .5s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes temblor{
+  10%,90%{ transform: translateX(-3px); }
+  20%,80%{ transform: translateX(5px); }
+  30%,50%,70%{ transform: translateX(-8px); }
+  40%,60%{ transform: translateX(8px); }
+}
+
+.categoria{
+  font-size:10px; letter-spacing:.28em; text-transform:uppercase;
+  color: var(--celeste); opacity:.8; font-weight:700; margin-bottom:12px;
+}
+.pregunta{
+  font-family: var(--display);
+  font-size: clamp(21px, 5.9vw, 26px);
+  line-height:1.3; font-weight:400;
+  text-wrap:balance;
+}
+
+/* --- Opciones --- */
+.opciones{ margin-top:22px; display:flex; flex-direction:column; gap:10px; }
+.opcion{
+  display:flex; align-items:center; gap:13px;
+  width:100%; min-height:58px;
+  padding:15px 17px;
+  border-radius: var(--r-md);
+  border:1.5px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.035);
+  color: var(--blanco);
+  font-family:var(--body); font-size:15.5px; line-height:1.35; text-align:left;
+  cursor:pointer;
+  transition: border-color .2s ease, background .2s ease, transform .15s ease;
+}
+.opcion:active{ transform: scale(.985); }
+.opcion .letra{
+  flex:0 0 auto;
+  width:27px; height:27px; border-radius:50%;
+  display:grid; place-items:center;
+  font-size:11.5px; font-weight:800; letter-spacing:.04em;
+  background: rgba(126,216,255,.12);
+  color: var(--celeste);
+  border:1px solid rgba(126,216,255,.25);
+  transition: all .2s ease;
+}
+.opcion.elegida{
+  border-color: var(--celeste);
+  background: rgba(126,216,255,.13);
+  box-shadow: 0 0 0 3px rgba(126,216,255,.10), 0 8px 24px rgba(126,216,255,.12);
+}
+.opcion.elegida .letra{ background: var(--celeste); color:#03192b; border-color:var(--celeste); }
+.opcion.fallo{ border-color: var(--error); background: rgba(255,154,174,.10); }
+.opcion.fallo .letra{ background: var(--error); color:#3a0a15; border-color:var(--error); }
+.opcion:focus-visible{ outline:2px solid var(--celeste-pale); outline-offset:2px; }
+
+/* --- Mensaje de pista / error --- */
+.aviso{
+  margin-top:16px;
+  border-radius: var(--r-md);
+  border:1px solid rgba(255,154,174,.28);
+  background: rgba(255,154,174,.08);
+  padding:14px 16px;
+  font-size:14px; line-height:1.5;
+  display:none;
+}
+.aviso.visible{ display:block; animation: apareceAviso .38s ease both; }
+@keyframes apareceAviso{ from{ opacity:0; transform: translateY(-6px);} to{ opacity:1; transform:none;} }
+.aviso .burla{ color: var(--error); font-weight:700; display:block; margin-bottom:5px; }
+.aviso .pista{ color: rgba(255,255,255,.72); }
+.aviso .pista b{ color: var(--celeste-pale); font-weight:600; }
+
+/* --- Corazones de acierto (burst DOM) --- */
+#burst{ position:fixed; inset:0; z-index:5; pointer-events:none; overflow:hidden; }
+.corazon-burst{ position:absolute; animation: burstCorazon 1.15s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes burstCorazon{
+  0%  { transform: translate(0,0) scale(.2) rotate(0deg); opacity:0; }
+  18% { opacity:1; }
+  100%{ transform: translate(var(--dx), var(--dy)) scale(var(--sc,1)) rotate(var(--rot,30deg)); opacity:0; }
+}
+
+/* --- Botón de música --- */
+#btn-musica{
+  position:fixed;
+  top: calc(env(safe-area-inset-top) + 12px);
+  right: 12px;
+  z-index:20;
+  width:42px; height:42px;
+  border-radius:50%;
+  border:1px solid rgba(126,216,255,.28);
+  background: rgba(4,16,31,.55);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--celeste);
+  display:none; place-items:center;
+  cursor:pointer;
+  transition: transform .18s ease, opacity .2s ease;
+}
+#btn-musica.visible{ display:grid; }
+#btn-musica:active{ transform: scale(.9); }
+#btn-musica.apagado{ color: rgba(255,255,255,.3); border-color: rgba(255,255,255,.14); }
+#btn-musica svg{ width:19px; height:19px; }
+
+/* ============================================================
+   5. PANTALLA DE TRANSICIÓN
+   ============================================================ */
+#pantalla-transicion .contenedor{ text-align:center; }
+.texto-transicion{
+  font-family: var(--display);
+  font-size: clamp(27px, 8vw, 38px);
+  line-height:1.25;
+  opacity:0;
+  min-height:1.3em;
+}
+.texto-transicion.visible{ animation: fadeTrans .9s ease both; }
+@keyframes fadeTrans{ from{ opacity:0; transform: translateY(10px) scale(.97);} to{ opacity:1; transform:none;} }
+.puntos{ display:inline-block; }
+.puntos i{
+  display:inline-block; font-style:normal;
+  animation: parpadeoPunto 1.4s ease-in-out infinite;
+  color: var(--celeste);
+}
+.puntos i:nth-child(2){ animation-delay:.2s; }
+.puntos i:nth-child(3){ animation-delay:.4s; }
+@keyframes parpadeoPunto{ 0%,100%{opacity:.2;} 50%{opacity:1;} }
+
+/* Velo que oscurece la pantalla antes del final */
+#velo{
+  position:fixed; inset:0; z-index:30;
+  background:#000; opacity:0; pointer-events:none;
+  transition: opacity 1.5s ease;
+}
+#velo.oscuro{ opacity:1; }
+
+/* ============================================================
+   6. PANTALLA FINAL
+   ============================================================ */
+#pantalla-final{
+  background:
+    radial-gradient(90% 60% at 50% 45%, rgba(126,216,255,.16), transparent 70%),
+    radial-gradient(140% 100% at 50% 50%, #061a2e 0%, #02090f 70%, #000 100%);
+  z-index:40;
+}
+#lienzo{ position:fixed; inset:0; z-index:41; pointer-events:none; }
+
+/* Zoom lento del fondo durante la revelación */
+#pantalla-final.zoom::before{
+  content:""; position:absolute; inset:0;
+  background: radial-gradient(60% 40% at 50% 48%, rgba(126,216,255,.22), transparent 70%);
+  animation: zoomFondo 14s ease-out forwards;
+}
+@keyframes zoomFondo{ from{ transform: scale(1); opacity:.5; } to{ transform: scale(1.5); opacity:1; } }
+
+#final-contenido{
+  position:relative; z-index:42;
+  text-align:center; width:100%; max-width:480px; margin:auto;
+}
+
+.marcador{
+  font-family: var(--display);
+  font-size: clamp(58px, 21vw, 96px);
+  line-height:1; font-weight:400; letter-spacing:-.02em;
+  color: var(--blanco);
+  text-shadow: 0 0 40px rgba(126,216,255,.6), 0 0 90px rgba(126,216,255,.3);
+  opacity:0;
+}
+.marcador.on{ animation: zoomMarcador 1.25s cubic-bezier(.16,1,.3,1) both; }
+@keyframes zoomMarcador{
+  0%  { opacity:0; transform: scale(2.6); filter: blur(16px); }
+  60% { opacity:1; }
+  100%{ opacity:1; transform: scale(1); filter: blur(0); }
+}
+
+.subtitulo-final{
+  margin-top:14px;
+  font-size: clamp(15px, 4.3vw, 17.5px);
+  color: rgba(255,255,255,.66);
+  letter-spacing:.01em;
+  opacity:0;
+}
+.subtitulo-final.on{ animation: subeFade 1s ease both; }
+
+.separador-final{
+  width:0; height:1px; margin:34px auto 30px;
+  background: linear-gradient(90deg, transparent, var(--celeste), transparent);
+  box-shadow: 0 0 14px rgba(126,216,255,.8);
+  transition: width 1.3s cubic-bezier(.2,.9,.3,1);
+}
+.separador-final.on{ width:190px; }
+
+/* Mensaje principal */
+.mensaje-final{ display:flex; flex-direction:column; gap:12px; }
+.linea-final{
+  font-family: var(--display);
+  line-height:1.18;
+  opacity:0;
+  position:relative;
+  text-wrap:balance;
+}
+.linea-final.on{ animation: subeFade 1.15s cubic-bezier(.16,1,.3,1) both; }
+@keyframes subeFade{
+  from{ opacity:0; transform: translateY(22px); filter: blur(7px); }
+  to  { opacity:1; transform:none; filter: blur(0); }
+}
+#linea-1{ font-size: clamp(28px, 8.4vw, 40px); }
+#linea-1 span{
+  color: var(--celeste);
+  text-shadow: 0 0 30px rgba(126,216,255,.75), 0 0 70px rgba(126,216,255,.35);
+}
+#linea-2{ font-size: clamp(23px, 6.8vw, 32px); color: rgba(255,255,255,.9); }
+#linea-3{
+  font-size: clamp(26px, 7.6vw, 36px);
+  color: var(--blanco);
+  margin-top:6px;
+  letter-spacing:.01em;
+}
+
+/* Brillo que recorre el texto */
+.brillo{
+  background: linear-gradient(100deg,
+    rgba(255,255,255,.92) 0%, rgba(255,255,255,.92) 38%,
+    #ffffff 46%, var(--celeste-pale) 50%, #ffffff 54%,
+    rgba(255,255,255,.92) 62%, rgba(255,255,255,.92) 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation: recorreBrillo 3.6s ease-in-out 1s infinite;
+}
+@keyframes recorreBrillo{
+  0%  { background-position: 160% 0; }
+  55% { background-position: -60% 0; }
+  100%{ background-position: -60% 0; }
+}
+
+/* Corazón 🩵 con pulso */
+.late{
+  display:inline-block;
+  animation: latido 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px rgba(126,216,255,.85));
+}
+@keyframes latido{
+  0%,100%{ transform: scale(1); }
+  14%    { transform: scale(1.22); }
+  28%    { transform: scale(1); }
+  42%    { transform: scale(1.14); }
+  56%    { transform: scale(1); }
+}
+
+/* Línea de cierre */
+.cierre{
+  margin-top:30px;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: clamp(19px, 5.4vw, 24px);
+  color: var(--celeste-pale);
+  text-shadow: 0 0 24px rgba(126,216,255,.45);
+  opacity:0;
+}
+.cierre.on{ animation: subeFade 1.2s ease both; }
+
+.fecha-chip{
+  display:inline-block; margin-top:22px;
+  padding:10px 20px; border-radius:100px;
+  border:1px solid rgba(126,216,255,.3);
+  background: rgba(126,216,255,.08);
+  font-size:11px; letter-spacing:.26em; text-transform:uppercase;
+  color: var(--celeste-pale); font-weight:600;
+  opacity:0;
+}
+.fecha-chip.on{ animation: subeFade 1s ease both; }
+
+/* ============================================================
+   7. ACCESIBILIDAD / MOVIMIENTO REDUCIDO
+   ============================================================ */
+@media (prefers-reduced-motion: reduce){
+  .corazon-flotante, .pulso-btn, .brillo, #pantalla-final.zoom::before{ animation:none !important; }
+  .late{ animation-duration: 4s; }
+}
+@media (max-height: 620px){
+  .linea-deco{ margin:22px auto; }
+  .separador-final{ margin:22px auto 20px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Fondo y capas decorativas -->
+<div id="fondo"></div>
+<div id="corazones-fondo" aria-hidden="true"></div>
+<div id="burst" aria-hidden="true"></div>
+
+<!-- Audio local: bbywow.mp3 (base) y koko.mp3 (sorpresa final), junto a este archivo -->
+<audio id="audio-base"  src="bbywow.mp3" loop preload="none"></audio>
+<audio id="audio-final" src="koko.mp3"   loop preload="none"></audio>
+
+<!-- Botón discreto de música -->
+<button id="btn-musica" aria-label="Activar o desactivar la música">
+  <svg id="icono-musica" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+  </svg>
+</button>
+
+<!-- ============================================================
+     PANTALLA 1 · INICIO
+     ============================================================ -->
+<section class="pantalla activa" id="pantalla-inicio">
+  <div class="contenedor">
+    <p class="eyebrow">Solo para ti</p>
+
+    <h1 class="titulo-inicio">Hay algo que tienes<br>que <em>descubrir…</em></h1>
+
+    <p class="sub-inicio">Pero primero tendrás que demostrar cuánto recuerdas.</p>
+
+    <div class="linea-deco"></div>
+
+    <button class="btn pulso-btn" id="btn-comenzar">Comenzar</button>
+
+    <p class="nota-inicio">11 preguntas · sin trampas · sin ayuda</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     PANTALLA 2 · CUESTIONARIO
+     ============================================================ -->
+<section class="pantalla" id="pantalla-quiz">
+  <div class="contenedor">
+
+    <!-- Progreso -->
+    <div class="progreso">
+      <div class="progreso-top">
+        <span>Pregunta <strong id="num-actual">1</strong> de <span id="total-preguntas">11</span></span>
+        <span id="pct-progreso">0%</span>
+      </div>
+      <span class="barra-bloques" id="barra-bloques" aria-hidden="true"></span>
+      <div class="barra-fina"><span id="barra-fina"></span></div>
+    </div>
+
+    <!-- Tarjeta de pregunta -->
+    <div class="tarjeta" id="tarjeta">
+      <p class="categoria" id="categoria"></p>
+      <h2 class="pregunta" id="texto-pregunta"></h2>
+
+      <div class="opciones" id="opciones"></div>
+
+      <div class="aviso" id="aviso">
+        <span class="burla" id="aviso-burla"></span>
+        <span class="pista" id="aviso-pista"></span>
+      </div>
+    </div>
+
+    <button class="btn" id="btn-continuar" disabled>Continuar</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     PANTALLA 3 · TRANSICIÓN
+     ============================================================ -->
+<section class="pantalla" id="pantalla-transicion">
+  <div class="contenedor">
+    <p class="texto-transicion" id="texto-transicion"></p>
+  </div>
+</section>
+
+<!-- Velo de oscurecimiento -->
+<div id="velo"></div>
+
+<!-- ============================================================
+     PANTALLA 4 · FINAL
+     ============================================================ -->
+<section class="pantalla" id="pantalla-final">
+  <canvas id="lienzo"></canvas>
+
+  <div id="final-contenido">
+    <div class="marcador" id="marcador">11/11</div>
+    <p class="subtitulo-final" id="subtitulo-final">Parece que todavía recuerdas todo…</p>
+
+    <div class="separador-final" id="separador-final"></div>
+
+    <div class="mensaje-final">
+      <p class="linea-final" id="linea-1">Alístate para ver a <span class="brillo">Omar Courtz</span></p>
+      <p class="linea-final" id="linea-2">el 13 de noviembre</p>
+      <p class="linea-final" id="linea-3">juntos <span class="late">🩵</span></p>
+    </div>
+
+    <p class="cierre" id="cierre">Feliz mes, mi amor</p>
+
+    <div class="fecha-chip" id="chip">Nos vemos ahí</div>
+  </div>
+</section>
+
+<script>
+/* ============================================================
+   ÍNDICE DEL SCRIPT
+   1. Datos: preguntas y respuestas correctas
+   2. Estado del cuestionario
+   3. Utilidades (SVG corazón, random)
+   4. Corazones de fondo
+   5. Música
+   6. Navegación entre pantallas
+   7. Render de pregunta y barra de progreso
+   8. Validación de respuestas
+   9. Animación de acierto (corazones)
+   10. Transición final
+   11. Animación final (canvas: confeti, corazones, estrellas, destellos)
+   12. Revelación del mensaje
+   13. Arranque
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. DATOS: PREGUNTAS Y RESPUESTAS CORRECTAS
+   Las respuestas correctas viven SOLO aquí, nunca en el HTML.
+   ------------------------------------------------------------ */
+const PREGUNTAS = [
+
+  /* --- 1 a 3: gustos compartidos --- */
+  {
+    categoria: "Gustos compartidos",
+    texto: "Si tuviéramos que elegir un solo deporte para vivir el resto de la vida, ¿cuál sería?",
+    opciones: ["Fútbol", "Volleyball", "Tenis", "Natación"],
+    correcta: 1,
+    burla: "Ni cerquita. ¿En serio?",
+    pista: "Se juega con las manos, hay una red en el medio y alguien siempre grita <b>“¡mía!”</b>."
+  },
+  {
+    categoria: "Gustos compartidos",
+    texto: "Hay un postre que jamás se discute: cuando aparece en la carta, ya está pedido. ¿Cuál es?",
+    opciones: ["Cheesecake de maracuyá", "Brownie con helado", "Tiramisú", "Flan de caramelo"],
+    correcta: 0,
+    burla: "No, ese lo pedimos por educación.",
+    pista: "Lleva una fruta <b>ácida y amarilla</b> encima, y de italiano no tiene nada."
+  },
+  {
+    categoria: "Gustos compartidos",
+    texto: "¿Cuál es oficialmente la comida favorita de los dos?",
+    opciones: ["Hamburguesas", "Sushi", "Pizza", "Pasta"],
+    correcta: 1,
+    burla: "Rico, sí. Nuestro plan de siempre, no.",
+    pista: "Viene en rollitos y siempre pedimos <b>más de lo que cabe</b>."
+  },
+
+  /* --- 4 a 6: recuerdos --- */
+  {
+    categoria: "Recuerdos",
+    texto: "¿Dónde ocurrió aquel primer beso que terminó teniendo sabor a hamburguesa y cerveza?",
+    opciones: ["Mono Bandido", "Bogotá Beer Company", "El Corral Gourmet", "La Hamburguesería"],
+    correcta: 0,
+    burla: "Ese lugar ni existía en la historia.",
+    pista: "El nombre tiene un <b>animal</b> y suena a alguien que se roba corazones."
+  },
+  {
+    categoria: "Recuerdos",
+    texto: "Primera cita, y un perfume decidiendo el destino de todo. ¿Cuál era?",
+    opciones: [
+      "Dior Sauvage",
+      "Paco Rabanne 1 Million",
+      "Jean Paul Gaultier Le Beau Le Parfum",
+      "Carolina Herrera Bad Boy"
+    ],
+    correcta: 2,
+    burla: "Buen intento, pero ese no fue.",
+    pista: "El frasco tiene <b>forma de cuerpo</b> y el nombre está en francés."
+  },
+  {
+    categoria: "Recuerdos",
+    texto: "Las primeras canciones que nos dedicamos fueron…",
+    opciones: [
+      "“Perfect” y “Photograph”",
+      "“Estar Enamorado” y “Cuando Te Besé”",
+      "“Te Boté” y “Amorfoda”",
+      "“La Bachata” y “Vagabundo”"
+    ],
+    correcta: 1,
+    burla: "Bonitas, pero no fueron las nuestras.",
+    pista: "Una habla de <b>un sentimiento</b> y la otra de <b>un momento exacto</b>."
+  },
+
+  /* --- 7 a 8: relación y experiencias compartidas --- */
+  {
+    categoria: "Lo nuestro",
+    texto: "Nuestro plan favorito no cuesta ni un peso. ¿Cuál es?",
+    opciones: [
+      "Ver una película en silencio",
+      "Cocinar juntos a media noche",
+      "Dormir arrunchados",
+      "Salir a caminar sin rumbo"
+    ],
+    correcta: 2,
+    burla: "Casi, pero eso no es lo que mejor hacemos.",
+    pista: "Pasa en la cama, sin hablar, y siempre <b>sobra un brazo</b>."
+  },
+  {
+    categoria: "Lo nuestro",
+    texto: "¿Cuál fue el primer anime que vimos juntos y nos enganchó por completo?",
+    opciones: ["Demon Slayer", "Spy x Family", "Jujutsu Kaisen", "Your Name"],
+    correcta: 1,
+    burla: "Ese es de otra temporada de la vida.",
+    pista: "Una familia falsa, una niña que lee mentes y <b>maní por todos lados</b>."
+  },
+
+  /* --- 9 a 10: futuro y bromas internas --- */
+  {
+    categoria: "Lo que viene",
+    texto: "El destino soñado, ese del que hablamos como si el vuelo ya estuviera comprado:",
+    opciones: ["Italia", "Japón", "Grecia", "Corea del Sur"],
+    correcta: 1,
+    burla: "Ese lo dejamos para después.",
+    pista: "Mismo país del <b>sushi</b> y del <b>anime</b>. Coincidencia, ninguna."
+  },
+  {
+    categoria: "Lo que viene",
+    texto: "Antes de cruzar el mundo hay uno más cerquita: ¿cuál será nuestro primer viaje internacional?",
+    opciones: ["México", "Argentina", "Perú", "Brasil"],
+    correcta: 2,
+    burla: "Bonito, pero ese no es el primero de la lista.",
+    pista: "Montañas, una <b>ciudad perdida entre nubes</b> y el mejor ceviche del continente."
+  },
+  {
+    categoria: "Broma interna",
+    texto: "Existe una excusa perfecta, e indiscutible, para morder al otro en plena calle. ¿Cuál es?",
+    opciones: [
+      "“Punto rojo”",
+      "“Carro amarillo”",
+      "“Pichirilo en la calle”",
+      "“Moto sin placa”"
+    ],
+    correcta: 2,
+    burla: "Esa regla no aplica en nuestro reglamento.",
+    pista: "Va sobre carros feos y sí, la última palabra es <b>“calle”</b>."
+  }
+];
+
+/* ------------------------------------------------------------
+   2. ESTADO DEL CUESTIONARIO (solo en memoria, se reinicia al recargar)
+   ------------------------------------------------------------ */
+const estado = {
+  indice: 0,
+  seleccion: null,
+  bloqueado: false,
+  intentos: 0
+};
+
+/* Referencias del DOM */
+const $ = (id) => document.getElementById(id);
+const el = {
+  pantallaInicio: $("pantalla-inicio"),
+  pantallaQuiz: $("pantalla-quiz"),
+  pantallaTransicion: $("pantalla-transicion"),
+  pantallaFinal: $("pantalla-final"),
+  btnComenzar: $("btn-comenzar"),
+  btnContinuar: $("btn-continuar"),
+  tarjeta: $("tarjeta"),
+  categoria: $("categoria"),
+  textoPregunta: $("texto-pregunta"),
+  opciones: $("opciones"),
+  aviso: $("aviso"),
+  avisoBurla: $("aviso-burla"),
+  avisoPista: $("aviso-pista"),
+  numActual: $("num-actual"),
+  totalPreguntas: $("total-preguntas"),
+  pct: $("pct-progreso"),
+  barraBloques: $("barra-bloques"),
+  barraFina: $("barra-fina"),
+  textoTransicion: $("texto-transicion"),
+  velo: $("velo"),
+  burst: $("burst"),
+  fondoCorazones: $("corazones-fondo"),
+  audioBase: $("audio-base"),
+  audioFinal: $("audio-final"),
+  btnMusica: $("btn-musica"),
+  iconoMusica: $("icono-musica")
+};
+
+const LETRAS = ["A", "B", "C", "D"];
+
+/* ------------------------------------------------------------
+   3. UTILIDADES
+   ------------------------------------------------------------ */
+function aleatorio(min, max){ return Math.random() * (max - min) + min; }
+
+/** Corazón en SVG (sin imágenes externas) */
+function svgCorazon(tam, color, opacidad){
+  return `<svg width="${tam}" height="${tam}" viewBox="0 0 32 32" fill="${color}" opacity="${opacidad}">
+    <path d="M16 28S3 19.6 3 11.6C3 7.4 6.3 4 10.4 4c2.5 0 4.6 1.3 5.6 3.2C17 5.3 19.1 4 21.6 4 25.7 4 29 7.4 29 11.6 29 19.6 16 28 16 28z"/>
+  </svg>`;
+}
+
+/* ------------------------------------------------------------
+   4. CORAZONES DE FONDO (pantalla inicial y cuestionario)
+   ------------------------------------------------------------ */
+function crearCorazonesFondo(cantidad = 14){
+  for (let i = 0; i < cantidad; i++){
+    const c = document.createElement("div");
+    c.className = "corazon-flotante";
+    const tam = aleatorio(10, 26);
+    c.style.left = aleatorio(0, 100) + "%";
+    c.style.animationDuration = aleatorio(13, 26) + "s";
+    c.style.animationDelay = "-" + aleatorio(0, 22) + "s";
+    c.style.setProperty("--drift", aleatorio(-50, 50) + "px");
+    c.innerHTML = svgCorazon(tam, "#7ed8ff", aleatorio(.3, .8).toFixed(2));
+    el.fondoCorazones.appendChild(c);
+  }
+}
+
+/* ------------------------------------------------------------
+   5. MÚSICA (dos pistas)
+   · bbywow.mp3 → suena durante el cuestionario (base)
+   · koko.mp3   → entra en la sorpresa final
+   La página funciona igual si algún archivo no existe.
+   ------------------------------------------------------------ */
+const musica = {
+  baseOk: true,
+  finalOk: true,
+  sonando: false,
+  actual: null,          // elemento <audio> que está sonando ahora
+  volumen: 0.75
+};
+
+const ICONO_ON  = '<path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>';
+const ICONO_OFF = '<path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="2.1" fill="none" stroke-linecap="round"/>';
+
+el.audioBase.addEventListener("error",  () => { musica.baseOk  = false; if (!musica.finalOk) el.btnMusica.classList.remove("visible"); });
+el.audioFinal.addEventListener("error", () => { musica.finalOk = false; });
+
+/** Transición suave de volumen sobre un elemento de audio */
+function fundir(audio, desde, hasta, duracion, alTerminar){
+  const inicio = performance.now();
+  audio.volume = Math.max(0, Math.min(1, desde));
+  (function paso(t){
+    const p = Math.min((t - inicio) / duracion, 1);
+    audio.volume = Math.max(0, Math.min(1, desde + (hasta - desde) * p));
+    if (p < 1) requestAnimationFrame(paso);
+    else if (alTerminar) alTerminar();
+  })(inicio);
+}
+
+/** Arranca la pista base tras el primer toque del usuario */
+function iniciarMusica(){
+  if (!musica.baseOk) return;
+  reproducir(el.audioBase, 2200);
+}
+
+function reproducir(audio, fadeIn){
+  audio.volume = 0;
+  const intento = audio.play();
+  if (intento && typeof intento.then === "function"){
+    intento.then(() => {
+      musica.actual = audio;
+      musica.sonando = true;
+      el.btnMusica.classList.add("visible");
+      el.btnMusica.classList.remove("apagado");
+      el.iconoMusica.innerHTML = ICONO_ON;
+      fundir(audio, 0, musica.volumen, fadeIn);
+    }).catch(() => {
+      /* El navegador bloqueó la reproducción: dejamos el botón por si quiere activarla. */
+      musica.actual = audio;
+      musica.sonando = false;
+      el.btnMusica.classList.add("visible", "apagado");
+      el.iconoMusica.innerHTML = ICONO_OFF;
+    });
+  }
+}
+
+/** Cambio de canción para la sorpresa: baja la base y entra KOKO */
+function cambiarAPistaFinal(){
+  const arrancarFinal = () => {
+    if (!musica.finalOk) { musica.actual = null; musica.sonando = false; return; }
+    reproducir(el.audioFinal, 1800);
+  };
+
+  if (musica.baseOk && !el.audioBase.paused){
+    fundir(el.audioBase, el.audioBase.volume, 0, 1200, () => {
+      el.audioBase.pause();
+      arrancarFinal();
+    });
+  } else {
+    arrancarFinal();
+  }
+}
+
+function alternarMusica(){
+  const audio = musica.actual;
+  if (!audio) return;
+  if (musica.sonando){
+    audio.pause();
+    musica.sonando = false;
+    el.btnMusica.classList.add("apagado");
+    el.iconoMusica.innerHTML = ICONO_OFF;
+  } else {
+    audio.play().then(() => {
+      musica.sonando = true;
+      el.btnMusica.classList.remove("apagado");
+      el.iconoMusica.innerHTML = ICONO_ON;
+      if (audio.volume < .1) fundir(audio, 0, musica.volumen, 1200);
+    }).catch(() => {});
+  }
+}
+el.btnMusica.addEventListener("click", alternarMusica);
+
+/* ------------------------------------------------------------
+   6. NAVEGACIÓN ENTRE PANTALLAS
+   ------------------------------------------------------------ */
+function mostrarPantalla(seccion){
+  document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+  seccion.classList.add("activa");
+}
+
+/* ------------------------------------------------------------
+   7. RENDER DE PREGUNTA Y BARRA DE PROGRESO
+   ------------------------------------------------------------ */
+function pintarProgreso(){
+  const completadas = estado.indice;                 // preguntas ya resueltas
+  const total = PREGUNTAS.length;
+  const pct = Math.round((completadas / total) * 100);
+
+  el.numActual.textContent = Math.min(estado.indice + 1, total);
+  el.totalPreguntas.textContent = total;
+  el.pct.textContent = pct + "%";
+  el.barraFina.style.width = pct + "%";
+
+  /* Barra de bloques: ████░░░░░░ */
+  el.barraBloques.innerHTML =
+    "<b>" + "█".repeat(completadas) + "</b>" + "░".repeat(total - completadas);
+}
+
+function pintarPregunta(){
+  const p = PREGUNTAS[estado.indice];
+
+  estado.seleccion = null;
+  estado.intentos = 0;
+  estado.bloqueado = false;
+
+  el.categoria.textContent = p.categoria;
+  el.textoPregunta.textContent = p.texto;
+  el.aviso.classList.remove("visible");
+  el.btnContinuar.disabled = true;
+
+  /* Opciones */
+  el.opciones.innerHTML = "";
+  p.opciones.forEach((texto, i) => {
+    const btn = document.createElement("button");
+    btn.className = "opcion";
+    btn.type = "button";
+    btn.dataset.i = i;                                 // solo índice, nunca la respuesta
+    btn.innerHTML = `<span class="letra">${LETRAS[i]}</span><span>${texto}</span>`;
+    btn.addEventListener("click", () => elegirOpcion(i, btn));
+    el.opciones.appendChild(btn);
+  });
+
+  el.tarjeta.classList.remove("sale", "temblor");
+  el.tarjeta.classList.add("entra");
+
+  pintarProgreso();
+}
+
+function elegirOpcion(i, btn){
+  if (estado.bloqueado) return;
+  estado.seleccion = i;
+  el.opciones.querySelectorAll(".opcion").forEach(o => o.classList.remove("elegida", "fallo"));
+  btn.classList.add("elegida");
+  el.aviso.classList.remove("visible");
+  el.btnContinuar.disabled = false;
+}
+
+/* ------------------------------------------------------------
+   8. VALIDACIÓN DE RESPUESTAS
+   ------------------------------------------------------------ */
+function validar(){
+  if (estado.seleccion === null || estado.bloqueado) return;
+
+  const p = PREGUNTAS[estado.indice];
+  const acierto = estado.seleccion === p.correcta;
+  const elegida = el.opciones.querySelector(`.opcion[data-i="${estado.seleccion}"]`);
+
+  if (!acierto){
+    /* --- Error: no avanza, animación, mensaje divertido y pista --- */
+    estado.intentos++;
+    elegida.classList.remove("elegida");
+    elegida.classList.add("fallo");
+
+    el.tarjeta.classList.remove("temblor");
+    void el.tarjeta.offsetWidth;                       // reinicia la animación
+    el.tarjeta.classList.add("temblor");
+
+    el.avisoBurla.textContent = estado.intentos > 1 ? "Uy… otra vez no." : p.burla;
+    el.avisoPista.innerHTML = "<b>Pista:</b> " + p.pista;
+    el.aviso.classList.add("visible");
+
+    if (navigator.vibrate) navigator.vibrate(60);
+
+    estado.seleccion = null;
+    el.btnContinuar.disabled = true;
+    return;
+  }
+
+  /* --- Acierto --- */
+  estado.bloqueado = true;
+  el.btnContinuar.disabled = true;
+  el.aviso.classList.remove("visible");
+  if (navigator.vibrate) navigator.vibrate([25, 40, 25]);
+
+  const r = elegida.getBoundingClientRect();
+  lanzarCorazones(r.left + r.width / 2, r.top + r.height / 2);
+
+  estado.indice++;
+  pintarProgreso();                                    // la barra avanza de inmediato
+
+  setTimeout(() => {
+    if (estado.indice >= PREGUNTAS.length){
+      iniciarTransicionFinal();
+    } else {
+      el.tarjeta.classList.remove("entra");
+      el.tarjeta.classList.add("sale");
+      setTimeout(pintarPregunta, 320);
+    }
+  }, 620);
+}
+
+el.btnContinuar.addEventListener("click", validar);
+
+/* ------------------------------------------------------------
+   9. ANIMACIÓN DE ACIERTO: corazones celestes saliendo
+   ------------------------------------------------------------ */
+function lanzarCorazones(x, y){
+  for (let i = 0; i < 14; i++){
+    const c = document.createElement("div");
+    c.className = "corazon-burst";
+    const tam = aleatorio(12, 26);
+    c.style.left = (x - tam / 2) + "px";
+    c.style.top  = (y - tam / 2) + "px";
+    c.style.setProperty("--dx", aleatorio(-130, 130) + "px");
+    c.style.setProperty("--dy", aleatorio(-190, -60) + "px");
+    c.style.setProperty("--sc", aleatorio(.7, 1.4).toFixed(2));
+    c.style.setProperty("--rot", aleatorio(-60, 60) + "deg");
+    c.style.animationDelay = (i * 22) + "ms";
+    c.innerHTML = svgCorazon(tam, "#7ed8ff", "0.95");
+    el.burst.appendChild(c);
+    setTimeout(() => c.remove(), 1500);
+  }
+}
+
+/* ------------------------------------------------------------
+   10. TRANSICIÓN FINAL
+   ------------------------------------------------------------ */
+const PASOS_TRANSICION = [
+  { texto: "Espera…",                     retraso: 200  },
+  { texto: "Estoy comprobando algo…",     retraso: 1800 },
+  { texto: "Creo que ya sé la respuesta…",retraso: 2400 }
+];
+
+function iniciarTransicionFinal(){
+  mostrarPantalla(el.pantallaTransicion);
+  el.fondoCorazones.style.opacity = ".35";
+
+  let acumulado = 0;
+  PASOS_TRANSICION.forEach((paso, i) => {
+    acumulado += paso.retraso;
+    setTimeout(() => {
+      el.textoTransicion.classList.remove("visible");
+      void el.textoTransicion.offsetWidth;
+      el.textoTransicion.innerHTML =
+        paso.texto.replace("…", '<span class="puntos"><i>.</i><i>.</i><i>.</i></span>');
+      el.textoTransicion.classList.add("visible");
+      if (i === PASOS_TRANSICION.length - 1){
+        /* La pantalla empieza a oscurecerse suavemente y entra KOKO */
+        setTimeout(() => {
+          el.velo.classList.add("oscuro");
+          cambiarAPistaFinal();
+        }, 1500);
+        setTimeout(abrirFinal, 3100);
+      }
+    }, acumulado);
+  });
+}
+
+function abrirFinal(){
+  el.fondoCorazones.style.display = "none";
+  mostrarPantalla(el.pantallaFinal);
+  el.pantallaFinal.classList.add("zoom");
+  iniciarLienzo();
+  setTimeout(() => {
+    el.velo.classList.remove("oscuro");
+    revelarMensaje();
+  }, 120);
+}
+
+/* ------------------------------------------------------------
+   11. ANIMACIÓN FINAL EN CANVAS
+   Confeti (cayendo + cañones laterales), corazones, estrellas,
+   destellos y partículas luminosas. Todo dibujado con código.
+   ------------------------------------------------------------ */
+const lienzo = $("lienzo");
+const ctx = lienzo.getContext("2d");
+
+let particulas = [];
+let estrellas = [];
+let animando = false;
+let inicioAnim = 0;
+let ancho = 0, alto = 0;
+
+const COLORES_CONFETI = ["#7ed8ff", "#cff1ff", "#ffffff", "#2a9fd6", "#a8e6ff", "#e8f9ff"];
+
+function ajustarLienzo(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  ancho = window.innerWidth;
+  alto  = window.innerHeight;
+  lienzo.width  = ancho * dpr;
+  lienzo.height = alto * dpr;
+  lienzo.style.width  = ancho + "px";
+  lienzo.style.height = alto + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", () => { if (animando) ajustarLienzo(); });
+
+/* --- Fábricas de partículas --- */
+function nuevoConfeti(x, y, vx, vy){
+  return {
+    tipo: "confeti",
+    x, y, vx, vy,
+    g: aleatorio(.14, .26),
+    w: aleatorio(5, 11),
+    h: aleatorio(8, 15),
+    rot: aleatorio(0, Math.PI * 2),
+    vrot: aleatorio(-.16, .16),
+    giro: aleatorio(0, Math.PI * 2),
+    vgiro: aleatorio(.08, .2),
+    color: COLORES_CONFETI[Math.floor(Math.random() * COLORES_CONFETI.length)],
+    vida: 1
+  };
+}
+
+function nuevoCorazon(){
+  return {
+    tipo: "corazon",
+    x: aleatorio(0, ancho),
+    y: alto + aleatorio(20, 220),
+    vy: aleatorio(-1.5, -0.55),
+    vx: aleatorio(-.35, .35),
+    tam: aleatorio(9, 24),
+    rot: aleatorio(-.35, .35),
+    vrot: aleatorio(-.01, .01),
+    alfa: aleatorio(.45, .95),
+    fase: aleatorio(0, Math.PI * 2)
+  };
+}
+
+function nuevoDestello(cx, cy){
+  const ang = aleatorio(0, Math.PI * 2);
+  const vel = aleatorio(.6, 3.4);
+  return {
+    tipo: "destello",
+    x: cx + Math.cos(ang) * aleatorio(0, 60),
+    y: cy + Math.sin(ang) * aleatorio(0, 60),
+    vx: Math.cos(ang) * vel,
+    vy: Math.sin(ang) * vel,
+    r: aleatorio(1, 3.2),
+    vida: 1,
+    decae: aleatorio(.008, .022),
+    color: Math.random() > .45 ? "#7ed8ff" : "#ffffff"
+  };
+}
+
+function crearEstrellas(cantidad = 90){
+  estrellas = [];
+  for (let i = 0; i < cantidad; i++){
+    estrellas.push({
+      x: aleatorio(0, ancho),
+      y: aleatorio(0, alto),
+      r: aleatorio(.5, 1.9),
+      fase: aleatorio(0, Math.PI * 2),
+      vel: aleatorio(.5, 2.1),
+      aparece: aleatorio(0, 5200)      // aparecen gradualmente
+    });
+  }
+}
+
+/* --- Dibujo de formas (sin imágenes externas) --- */
+function dibujarCorazon(x, y, tam, color, alfa, rot){
+  ctx.save();
+  ctx.globalAlpha = alfa;
+  ctx.fillStyle = color;
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(tam / 14, tam / 14);
+  ctx.beginPath();
+  ctx.moveTo(0, 6);
+  ctx.bezierCurveTo(-10, -2, -6.5, -12, 0, -6);
+  ctx.bezierCurveTo(6.5, -12, 10, -2, 0, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function dibujarEstrella(x, y, r, alfa){
+  ctx.save();
+  ctx.globalAlpha = alfa;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  /* pequeño brillo en cruz para las más grandes */
+  if (r > 1.3){
+    ctx.strokeStyle = "rgba(207,241,255," + (alfa * .55) + ")";
+    ctx.lineWidth = .7;
+    ctx.beginPath();
+    ctx.moveTo(x - r * 3, y); ctx.lineTo(x + r * 3, y);
+    ctx.moveTo(x, y - r * 3); ctx.lineTo(x, y + r * 3);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* --- Emisores --- */
+function lluviaConfeti(cantidad){
+  for (let i = 0; i < cantidad; i++){
+    particulas.push(nuevoConfeti(aleatorio(0, ancho), aleatorio(-140, -10), aleatorio(-.7, .7), aleatorio(1.4, 3.4)));
+  }
+}
+
+function canonLateral(lado, cantidad){
+  const x = lado === "izq" ? -10 : ancho + 10;
+  const y = alto * aleatorio(.45, .72);
+  for (let i = 0; i < cantidad; i++){
+    const dir = lado === "izq" ? 1 : -1;
+    particulas.push(nuevoConfeti(
+      x, y,
+      dir * aleatorio(5, 15),
+      aleatorio(-12, -2)
+    ));
+  }
+}
+
+function oleadaCorazones(cantidad){
+  for (let i = 0; i < cantidad; i++) particulas.push(nuevoCorazon());
+}
+
+function oleadaDestellos(cantidad){
+  const cx = ancho / 2, cy = alto * 0.42;
+  for (let i = 0; i < cantidad; i++) particulas.push(nuevoDestello(cx, cy));
+}
+
+/* --- Bucle de animación --- */
+function bucle(ahora){
+  if (!animando) return;
+  const t = ahora - inicioAnim;
+
+  ctx.clearRect(0, 0, ancho, alto);
+
+  /* Estrellas titilando */
+  estrellas.forEach(e => {
+    if (t < e.aparece) return;
+    const brillo = (Math.sin((t / 700) * e.vel + e.fase) + 1) / 2;
+    const entrada = Math.min((t - e.aparece) / 1200, 1);
+    dibujarEstrella(e.x, e.y, e.r, (.15 + brillo * .75) * entrada);
+  });
+
+  /* Halo celeste central (glow) */
+  const pulso = (Math.sin(t / 900) + 1) / 2;
+  const halo = ctx.createRadialGradient(ancho / 2, alto * .42, 0, ancho / 2, alto * .42, Math.max(ancho, alto) * .45);
+  halo.addColorStop(0, "rgba(126,216,255," + (0.10 + pulso * 0.07) + ")");
+  halo.addColorStop(1, "rgba(126,216,255,0)");
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, ancho, alto);
+
+  /* Partículas */
+  for (let i = particulas.length - 1; i >= 0; i--){
+    const p = particulas[i];
+
+    if (p.tipo === "confeti"){
+      p.vy += p.g;
+      p.vx *= 0.992;
+      p.vy *= 0.995;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vrot;
+      p.giro += p.vgiro;
+
+      const escalaY = Math.abs(Math.cos(p.giro));      // efecto de papel girando
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = .95;
+      ctx.fillRect(-p.w / 2, -p.h / 2 * escalaY, p.w, p.h * escalaY);
+      ctx.restore();
+
+      if (p.y > alto + 60 || p.x < -80 || p.x > ancho + 80) particulas.splice(i, 1);
+
+    } else if (p.tipo === "corazon"){
+      p.y += p.vy;
+      p.x += p.vx + Math.sin((t / 1000) + p.fase) * .5;
+      p.rot += p.vrot;
+      dibujarCorazon(p.x, p.y, p.tam, "#7ed8ff", p.alfa, p.rot);
+      if (p.y < -60) particulas.splice(i, 1);
+
+    } else if (p.tipo === "destello"){
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= .97; p.vy *= .97;
+      p.vida -= p.decae;
+      if (p.vida <= 0){ particulas.splice(i, 1); continue; }
+      ctx.save();
+      ctx.globalAlpha = Math.max(p.vida, 0);
+      ctx.fillStyle = p.color;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "#7ed8ff";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.vida, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  requestAnimationFrame(bucle);
+}
+
+function iniciarLienzo(){
+  ajustarLienzo();
+  crearEstrellas(window.innerWidth < 480 ? 70 : 110);
+  particulas = [];
+  animando = true;
+  inicioAnim = performance.now();
+  requestAnimationFrame(bucle);
+
+  /* Arranque simultáneo: confeti desde arriba + cañones laterales + corazones */
+  lluviaConfeti(70);
+  canonLateral("izq", 55);
+  canonLateral("der", 55);
+  oleadaCorazones(26);
+  oleadaDestellos(60);
+
+  /* Confeti sostenido durante varios segundos */
+  const lluvia = setInterval(() => lluviaConfeti(16), 380);
+  setTimeout(() => clearInterval(lluvia), 9000);
+
+  /* Cañones de refuerzo */
+  setTimeout(() => { canonLateral("izq", 45); canonLateral("der", 45); }, 2600);
+  setTimeout(() => { canonLateral("izq", 40); canonLateral("der", 40); }, 6200);
+
+  /* Corazones y destellos continuos */
+  const corazonesLoop = setInterval(() => oleadaCorazones(4), 700);
+  const destellosLoop = setInterval(() => oleadaDestellos(10), 900);
+  setTimeout(() => clearInterval(destellosLoop), 14000);
+  setTimeout(() => clearInterval(corazonesLoop), 45000);
+}
+
+/* ------------------------------------------------------------
+   12. REVELACIÓN DEL MENSAJE
+   ------------------------------------------------------------ */
+function revelarMensaje(){
+  const total = PREGUNTAS.length;
+  $("marcador").textContent = total + "/" + total;   // marcador perfecto real
+
+  const secuencia = [
+    { t: 300,   accion: () => $("marcador").classList.add("on") },
+    { t: 1900,  accion: () => $("subtitulo-final").classList.add("on") },
+    { t: 3600,  accion: () => $("separador-final").classList.add("on") },
+    { t: 4400,  accion: () => { $("linea-1").classList.add("on"); oleadaDestellos(40); } },
+    { t: 5600,  accion: () => $("linea-2").classList.add("on") },
+    { t: 6900,  accion: () => { $("linea-3").classList.add("on"); oleadaCorazones(20); } },
+    { t: 8600,  accion: () => { $("cierre").classList.add("on"); oleadaDestellos(25); } },
+    { t: 10000, accion: () => $("chip").classList.add("on") }
+  ];
+  secuencia.forEach(paso => setTimeout(paso.accion, paso.t));
+}
+
+/* ------------------------------------------------------------
+   13. ARRANQUE
+   ------------------------------------------------------------ */
+el.btnComenzar.addEventListener("click", () => {
+  iniciarMusica();                 // la música solo empieza tras este toque
+  mostrarPantalla(el.pantallaQuiz);
+  pintarPregunta();
+});
+
+crearCorazonesFondo();
+pintarProgreso();
+
+/* Evita el zoom por doble toque en móviles */
+let ultimoToque = 0;
+document.addEventListener("touchend", (e) => {
+  const ahora = Date.now();
+  if (ahora - ultimoToque < 320) e.preventDefault();
+  ultimoToque = ahora;
+}, { passive: false });
+</script>
+</body>
+</html>
